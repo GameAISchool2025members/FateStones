@@ -177,11 +177,10 @@ def getSelectionFromRobotMCTS(playerDiePool, opponentDiePool):
     board = tree.choose(board)
     return board.playerSelection
 
-def getSelectionFromRobot(playerDiePool, opponentDiePool):
-    return getSelectionFromRobotMCTS(playerDiePool, opponentDiePool)
-    return getSelectionFromRobotRandomly(playerDiePool)
+def getSelectionFromRobot(playerDiePool, opponentDiePool, useMCTS):
+    return getSelectionFromRobotMCTS(playerDiePool, opponentDiePool) if useMCTS else getSelectionFromRobotRandomly(playerDiePool)
 
-def playRound(playerOneDice, playerOneHuman, playerTwoDice, playerTwoHuman, resultsPath):
+def playRound(playerOneDice, playerOneHuman, playerTwoDice, playerTwoHuman, resultsPath, numMCTS):
     resultLog = ""
     if(len(playerOneDice) <= 0 or len(playerTwoDice) <= 0):
         print("No dice left to play! Scratch round")
@@ -194,8 +193,8 @@ def playRound(playerOneDice, playerOneHuman, playerTwoDice, playerTwoHuman, resu
         if(len(playerTwoDice) > player2Index):
             resultLog += playerTwoDice[player2Index]
         resultLog += ","
-    playerOneChoice = getSelectionFromHuman(playerOneDice, playerTwoDice) if playerOneHuman else getSelectionFromRobot(playerOneDice, playerTwoDice)
-    playerTwoChoice = getSelectionFromHuman(playerTwoDice, playerOneDice) if playerTwoHuman else getSelectionFromRobot(playerTwoDice, playerOneDice)
+    playerOneChoice = getSelectionFromHuman(playerOneDice, playerTwoDice) if playerOneHuman else getSelectionFromRobot(playerOneDice, playerTwoDice, numMCTS > 0)
+    playerTwoChoice = getSelectionFromHuman(playerTwoDice, playerOneDice) if playerTwoHuman else getSelectionFromRobot(playerTwoDice, playerOneDice, numMCTS > 1)
 
     resultLog += str(playerOneChoice) + ","
     resultLog += str(playerTwoChoice) + ","
@@ -222,7 +221,7 @@ def playRound(playerOneDice, playerOneHuman, playerTwoDice, playerTwoHuman, resu
     if playerOneResult == playerTwoResult:
         print("Players tied!")
         print("\n\nNext Round:")
-        playRound(playerOneDice, playerOneHuman, playerTwoDice, playerTwoHuman, resultsPath)
+        playRound(playerOneDice, playerOneHuman, playerTwoDice, playerTwoHuman, resultsPath, numMCTS)
     else:
         resultText = "Player 1 won with " + str(playerOneResult) + " over P2's " + str(playerTwoResult) if playerOneResult > playerTwoResult else "Player 2 won with " + str(playerTwoResult) + " over P1's " + str(playerOneResult)
         print(resultText)
@@ -230,7 +229,7 @@ def playRound(playerOneDice, playerOneHuman, playerTwoDice, playerTwoHuman, resu
 def populateDiePool(playerDiePool, sourceDiePool):
     playerDiePool.append(sourceDiePool.pop(random.randrange(len(sourceDiePool))))
 
-def runGameEpisode(faceOptions, playerOneHuman, playerTwoHuman, resultsPath):
+def runGameEpisode(faceOptions, playerOneHuman, playerTwoHuman, resultsPath, numMCTS):
     diceOptions=[]
     with open(faceOptions) as facesFile:
         for line in facesFile:
@@ -244,16 +243,19 @@ def runGameEpisode(faceOptions, playerOneHuman, playerTwoHuman, resultsPath):
     for _ in range(3):
         populateDiePool(playerOneDice, diceOptions)
         populateDiePool(playerTwoDice, diceOptions)
-    playRound(playerOneDice, playerOneHuman, playerTwoDice, playerTwoHuman, resultsPath)
+    playRound(playerOneDice, playerOneHuman, playerTwoDice, playerTwoHuman, resultsPath, numMCTS)
 
 numHumans = 2
 numGames = 1
 outputPath = ""
+numMCTS = 0
 if len(sys.argv) >= 3:
     numHumans = int(sys.argv[2])
 if len(sys.argv) >= 4:
     numGames = int(sys.argv[3])
 if len(sys.argv) >= 5:
     outputPath = sys.argv[4]
+if len(sys.argv) >= 6:
+    numMCTS = int(sys.argv[5])
 for _ in range(numGames):
-    runGameEpisode(sys.argv[1], numHumans > 0, numHumans > 1, outputPath)
+    runGameEpisode(sys.argv[1], numHumans > 0, numHumans > 1, outputPath, numMCTS)
