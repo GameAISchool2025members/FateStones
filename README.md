@@ -32,3 +32,8 @@ Then, the resulting dice are rolled, and the values are printed out.
 |Player 1 Die 1|Player 1 Die 2(nullable)|Player 1 Die 3(nullable)|Player 2 Die 1|Player 2 Die 2(nullable)|Player 2 Die 3(nullable)|Player 1 Choice (0-2)|Player 2 Choice(0-2)|Player 1 Result (1-6)| Player 2 Result(1-6)
 |---|---|---|---|---|---|---|---|---|---|
 |111111|111111|111111|111111|111111|111111|1|1|1|1|
+
+# Other Notes:
+The game simulator script, will not use the MCTS class. It's available at https://gist.github.com/qpwo/c538c6f73727e254fdc7fab81024f6e1, but I am not distributing it. Thanks Luke!
+
+The font which is used for the logo is Trekstone, from this link: https://www.dafont.com/trekstone.font - It is used noncommercially, and is not distributed.

@@ -1,5 +1,144 @@
 import sys
 import random
+from monte_carlo_tree_search import MCTS, Node #Uses https://gist.github.com/qpwo/c538c6f73727e254fdc7fab81024f6e1 - Thanks Luke Harold Miles!
+
+class FateStonesBoard(Node):
+
+    def __init__(self, playerDiePool, opponentDiePool, playerSelection, opponentSelection, playerValue, opponentValue):
+        self.playerDiePool = playerDiePool
+        self.opponentDiePool = opponentDiePool
+        self.playerSelection = playerSelection
+        self.opponentSelection = opponentSelection
+        self.playerValue = playerValue
+        self.opponentValue = opponentValue
+
+    def find_children(self):
+        #print("Finding children for:", self)
+        boardStates = set()
+        if self.is_terminal():
+            return boardStates
+        if self.playerSelection is None:
+            for playerSelectionIndex in range(len(self.playerDiePool)):
+                for opponentSelectionIndex in range(len(self.opponentDiePool)):
+                    newBoardState = FateStonesBoard(self.playerDiePool, self.opponentDiePool, playerSelectionIndex, opponentSelectionIndex, None, None)
+                    #print(f"Add board state {newBoardState}")
+                    boardStates.add(newBoardState)
+            return boardStates
+        if self.playerValue is None:
+            for playerRolledFace in range(6):
+                for opponentRolledFace in range(6):
+                    if self.playerSelection >= len(self.playerDiePool):
+                        print(f"ERROR: trying to evaluate die {self.playerSelection} when there are only {len(self.playerDiePool)} dice")
+                        quit()
+                    if self.opponentSelection >= len(self.opponentDiePool):
+                        print(f"ERROR: trying to evaluate die {self.opponentSelection} when there are only {len(self.opponentDiePool)} dice")
+                        quit()
+                    playerValue = int(self.playerDiePool[self.playerSelection][playerRolledFace])
+                    opponentValue = int(self.opponentDiePool[self.opponentSelection][opponentRolledFace])
+                    newBoardState = FateStonesBoard(self.playerDiePool, self.opponentDiePool, self.playerSelection, self.opponentSelection, playerValue, opponentValue)
+                    #print(f"Add board state {newBoardState}")
+                    boardStates.add(newBoardState)
+            return boardStates
+        #There was a tie, so we need to roll-off. If playerValue and playerSelection are set, and its not a tie, then we should be in the terminal state
+        if self.playerValue == self.opponentValue:
+            if(len(self.playerDiePool) <= 0 or len(self.opponentDiePool) <= 0):
+                print (f"Error, empty die pools attempting to be rolled out")
+                quit()
+            if len(self.playerDiePool) <= self.playerSelection:
+                print (f"Error, trying to pop {self.playerSelection} from pool with only {len(self.playerDiePool)} values")
+                quit()
+            if len(self.opponentDiePool) <= self.opponentSelection:
+                print (f"Error, trying to pop {self.opponentSelection} from pool with only {len(self.opponentDiePool)} values")
+                quit()
+            playerNewDiePool = self.playerDiePool.copy()
+            playerNewDiePool.pop(self.playerSelection)
+            opponentNewDiePool = self.opponentDiePool.copy()
+            opponentNewDiePool.pop(self.opponentSelection)
+            newBoardState = FateStonesBoard(playerNewDiePool, opponentNewDiePool, None, None, None, None)
+            boardStates.add(newBoardState)
+        return boardStates
+
+    def find_random_child(self):
+        if self.is_terminal():
+            return None
+        boards = self.find_children()
+        if boards is None or len(boards) == 0:
+            return None
+        setIndex = random.randrange(len(boards))
+        checkIndex = 0
+        for boardOption in boards:
+            if checkIndex == setIndex:
+                return boardOption
+            checkIndex+=1
+        return None
+
+    def is_terminal(self):
+        if len(self.playerDiePool) <= 0: 
+            return True
+        if self.playerValue is None or self.opponentValue is None:
+            return False
+        return self.playerValue != self.opponentValue
+
+    def reward(self):
+        if not self.is_terminal():
+            raise RuntimeError(f"reward called on nonterminal board {self}")
+        if len(self.playerDiePool) <= 0: #We ran out of dice, it's a tie
+            return .5
+        if self.playerValue > self.opponentValue:
+            return 1 #Could consider just returning playValue - opponentValue, but I'm using the "it's not how, it's how many" approach
+        elif self.opponentValue:
+            return 0
+        elif self.playerValue == self.opponentValue:
+            return .5
+        return 0
+    
+    def __hash__(self):
+        val = ""
+        for die in self.playerDiePool:
+            val += die
+        for die in self.opponentDiePool:
+            val += die
+        if self.playerSelection is not None:
+            val += str(self.playerSelection)
+        else:
+            val += "3"
+        if self.opponentSelection is not None:
+            val += str(self.opponentSelection)
+        else:
+            val += "3"
+        if self.playerValue is not None:
+            val += str(self.playerValue)
+        else:
+            val += "7"
+        if self.opponentValue is not None:
+            val += str(self.opponentValue)
+        else:
+            val += "7"
+        return int(val)
+    
+    def __eq__(node1, node2):
+        return hash(node1) == hash(node2)
+    
+    def __str__(self):
+        resultLog = ""
+        for player1Index in range(3):
+            if(len(self.playerDiePool) > player1Index):
+                resultLog += self.playerDiePool[player1Index]
+            resultLog += ","
+        for player2Index in range(3):
+            if(len(self.opponentDiePool) > player2Index):
+                resultLog += self.opponentDiePool[player2Index]
+            resultLog += ","
+        if self.playerSelection is not None:
+            resultLog += str(self.playerSelection) + ", " + str(self.opponentSelection) + ","
+        else:
+            resultLog += ",,"
+        if self.playerValue is not None:
+            resultLog += str(self.playerValue) + ", " + str(self.opponentValue) + ","
+        else:
+            resultLog += ",,"
+        resultLog += str(self.is_terminal())
+        return resultLog
 
 def getSelectionFromHuman(playerDiePool, opponentDiePool):
     print("Your dice:")
@@ -14,7 +153,7 @@ def getSelectionFromHuman(playerDiePool, opponentDiePool):
     selection = int(input())
     return selection-1
 
-def getSelectionFromRobot(playerDiePool, opponentDiePool):
+def getSelectionFromRobotRandomly(playerDiePool):
     max = 0
     maxIndicies = []
     for index in range(len(playerDiePool)):
@@ -28,6 +167,19 @@ def getSelectionFromRobot(playerDiePool, opponentDiePool):
         elif(value == max):
             maxIndicies.append(index)
     return maxIndicies[random.randrange(len(maxIndicies))]
+
+def getSelectionFromRobotMCTS(playerDiePool, opponentDiePool):
+    tree = MCTS()
+    board = FateStonesBoard(playerDiePool, opponentDiePool, None, None, None, None)
+    for rolloutIndex in range(10):
+        #print (f"Rolling out {rolloutIndex}")
+        tree.do_rollout(board)
+    board = tree.choose(board)
+    return board.playerSelection
+
+def getSelectionFromRobot(playerDiePool, opponentDiePool):
+    return getSelectionFromRobotMCTS(playerDiePool, opponentDiePool)
+    return getSelectionFromRobotRandomly(playerDiePool)
 
 def playRound(playerOneDice, playerOneHuman, playerTwoDice, playerTwoHuman, resultsPath):
     resultLog = ""
