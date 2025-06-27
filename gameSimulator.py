@@ -15,15 +15,38 @@ def getSelectionFromHuman(playerDiePool, opponentDiePool):
     return selection-1
 
 def getSelectionFromRobot(playerDiePool, opponentDiePool):
-    #TODO: Something smarter...
-    return random.randrange(len(playerDiePool))
+    max = 0
+    maxIndicies = []
+    for index in range(len(playerDiePool)):
+        die = playerDiePool[index]
+        value = 0
+        for stringIndex in range(len(die)):
+            value += int(die[stringIndex])
+        if(value > max):
+            maxIndicies = [index]
+            max = value
+        elif(value == max):
+            maxIndicies.append(index)
+    return maxIndicies[random.randrange(len(maxIndicies))]
 
-def playRound(playerOneDice, playerOneHuman, playerTwoDice, playerTwoHuman):
+def playRound(playerOneDice, playerOneHuman, playerTwoDice, playerTwoHuman, resultsPath):
+    resultLog = ""
     if(len(playerOneDice) <= 0 or len(playerTwoDice) <= 0):
         print("No dice left to play! Scratch round")
         return
+    for player1Index in range(3):
+        if(len(playerOneDice) > player1Index):
+            resultLog += playerOneDice[player1Index]
+        resultLog += ","
+    for player2Index in range(3):
+        if(len(playerTwoDice) > player2Index):
+            resultLog += playerTwoDice[player2Index]
+        resultLog += ","
     playerOneChoice = getSelectionFromHuman(playerOneDice, playerTwoDice) if playerOneHuman else getSelectionFromRobot(playerOneDice, playerTwoDice)
     playerTwoChoice = getSelectionFromHuman(playerTwoDice, playerOneDice) if playerTwoHuman else getSelectionFromRobot(playerTwoDice, playerOneDice)
+
+    resultLog += str(playerOneChoice) + ","
+    resultLog += str(playerTwoChoice) + ","
 
     playerOneDie = playerOneDice.pop(playerOneChoice)
     playerTwoDie = playerTwoDice.pop(playerTwoChoice)
@@ -34,13 +57,20 @@ def playRound(playerOneDice, playerOneHuman, playerTwoDice, playerTwoHuman):
     playerOneResult = int(playerOneDie[random.randrange(6)])
     playerTwoResult = int(playerTwoDie[random.randrange(6)])
 
+    resultLog += str(playerOneResult) + ","
+    resultLog += str(playerTwoResult) + "\n"
+
+    if(len(resultsPath) > 0):
+        with open(resultsPath, "a") as resultsFile:
+                resultsFile.write(resultLog)
+
     print("Player 1 Result: " + str(playerOneResult))
     print("Player 2 Result: " + str(playerTwoResult))
 
     if playerOneResult == playerTwoResult:
         print("Players tied!")
         print("\n\nNext Round:")
-        playRound(playerOneDice, playerOneHuman, playerTwoDice, playerTwoHuman)
+        playRound(playerOneDice, playerOneHuman, playerTwoDice, playerTwoHuman, resultsPath)
     else:
         resultText = "Player 1 won with " + str(playerOneResult) + " over P2's " + str(playerTwoResult) if playerOneResult > playerTwoResult else "Player 2 won with " + str(playerTwoResult) + " over P1's " + str(playerOneResult)
         print(resultText)
@@ -48,7 +78,7 @@ def playRound(playerOneDice, playerOneHuman, playerTwoDice, playerTwoHuman):
 def populateDiePool(playerDiePool, sourceDiePool):
     playerDiePool.append(sourceDiePool.pop(random.randrange(len(sourceDiePool))))
 
-def runGameEpisode(faceOptions, playerOneHuman, playerTwoHuman):
+def runGameEpisode(faceOptions, playerOneHuman, playerTwoHuman, resultsPath):
     diceOptions=[]
     with open(faceOptions) as facesFile:
         for line in facesFile:
@@ -62,9 +92,16 @@ def runGameEpisode(faceOptions, playerOneHuman, playerTwoHuman):
     for _ in range(3):
         populateDiePool(playerOneDice, diceOptions)
         populateDiePool(playerTwoDice, diceOptions)
-    playRound(playerOneDice, playerOneHuman, playerTwoDice, playerTwoHuman)
+    playRound(playerOneDice, playerOneHuman, playerTwoDice, playerTwoHuman, resultsPath)
 
 numHumans = 2
-if len(sys.argv) == 3:
+numGames = 1
+outputPath = ""
+if len(sys.argv) >= 3:
     numHumans = int(sys.argv[2])
-runGameEpisode(sys.argv[1], numHumans > 0, numHumans > 1)
+if len(sys.argv) >= 4:
+    numGames = int(sys.argv[3])
+if len(sys.argv) >= 5:
+    outputPath = sys.argv[4]
+for _ in range(numGames):
+    runGameEpisode(sys.argv[1], numHumans > 0, numHumans > 1, outputPath)
