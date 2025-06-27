@@ -171,7 +171,7 @@ def getSelectionFromRobotRandomly(playerDiePool):
 def getSelectionFromRobotMCTS(playerDiePool, opponentDiePool):
     tree = MCTS()
     board = FateStonesBoard(playerDiePool, opponentDiePool, None, None, None, None)
-    for rolloutIndex in range(10):
+    for rolloutIndex in range(50):
         #print (f"Rolling out {rolloutIndex}")
         tree.do_rollout(board)
     board = tree.choose(board)
