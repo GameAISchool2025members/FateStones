@@ -12,7 +12,7 @@ There are 462 unique dice available in this set. The full set is listed in `face
 2. The players can inspect each die they and their opponent have.
 3. Each player secretly selects a die to roll. They reveal their selections simultaneously.
 4. The players roll their dice, and compare results. Whomever has the higher result wins.
-5. If the players die, the repeat steps 3 and 4 with the remaining dice until a winner is determined, or the players run out of dice.
+5. If the players tie, the repeat steps 3 and 4 with the remaining dice until a winner is determined, or the players run out of dice.
 6. If the players run out of dice, then the round is a scratch. Restart the game from step 1.
 
 # Episode
